@@ -1,0 +1,37 @@
+var
+
+int n1 = 0
+int nFl = 0
+string src=""
+string dst=""
+label EXI
+
+endvar
+
+begin
+	
+	//this program 
+	//rename the file $1
+	//with the file $2
+	//syntax: rename "file1" "file2"
+	
+	//store the files name
+	src = $1
+	dst = $2
+	
+	call fex src
+	if @1==false
+		print "the source file"
+		println " doesn't exists!"
+		goto EXI
+	endif
+	
+	//copy source on destination
+	call cp src dst
+	
+	//remove the source file
+	call rm src
+	
+	EXI:
+	
+end

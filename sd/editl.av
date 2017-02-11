@@ -1,0 +1,112 @@
+var
+	string sIn=""
+	string sFn=""
+	int nEl = 0
+	int n1 = 0
+	int nFl = 0
+endvar
+
+begin
+	
+	//this program allow to modify 
+	//a single line in a file
+	//note: 
+	//the line must be 
+	//shorter than MAX_STRINGLEN (see compopt.h)
+	
+	//syntax: editl "file" num
+
+	print "edit file:"
+	println $1
+	//store the file name in a string
+	sFn=$1
+	
+	print "line:"
+	println $2
+	//store the edited line in a int
+	nEl=$2
+	
+	//call fgetl with 
+	//this program's arguments
+	call fgetl sFn nEl
+	
+	println ""
+	print "current line: "
+	println @1
+	
+	print "new line: "
+	getStr sIn
+	println ""
+	
+	print "this process "
+	print "could take "
+	print "a while..."
+	println "be patient!"
+	
+	//get the file lenght
+	call flen sFn
+	nFl=@1
+	
+	print"creating a"
+	print " temp file..."
+	
+	//create a temp file
+	call fex "TF"
+	if @1==true
+		call rm "TF"
+	endif	
+	call touch "TF"
+	
+	println "done!"
+	
+	
+	print"copying on"
+	println " temp file..."
+	
+	//copy the input file content on a temp file
+	for n1=1 to nFl step 1
+		call fgetl sFn n1	
+		if n1==nEl
+			call append "TF" sIn
+		else
+			call append "TF" @1
+		endif
+	endfor
+	
+	println "done!"
+	
+	print"removing "
+	print"the original"
+	println " file..."
+	//remove the original input file
+	call rm sFn
+	println "done!"
+	
+	//re-create a file with the original name
+	print"recreating "
+	print"the original"
+	print " file..."
+	call touch sFn
+	println "done!"
+	
+	
+	//copy the modified input file
+	print"copying "
+	print"on original"
+	println " file..."
+	call cp "TF" sFn
+	println "done!"
+	
+	//remove the temp file
+	print"remove "
+	print"temp"
+	println " file..."
+	call rm "TF"
+	println "done!"
+	
+	println ""
+	print "line "
+	print nEl
+	println " modified!"
+
+end

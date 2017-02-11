@@ -1,0 +1,12 @@
+var
+string sFn=""
+endvar
+
+begin
+	//this program is just a convenient wrapper
+	//for the "touch" function to be used in AVIL_shell sketch
+	
+	//create a new file with the name passed as argument
+	sFn=$1
+	call touch sFn
+end

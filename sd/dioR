@@ -1,0 +1,10 @@
+var
+int pin = 0
+endvar
+
+begin
+	//this program is just a convenient wrapper
+	//for the "dioR" function to be used in AVIL_shell sketch
+	pin=$1
+	call dioR pin
+end

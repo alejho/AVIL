@@ -1,0 +1,15 @@
+var
+string sFn=""
+endvar
+
+begin
+	//this program is just a convenient wrapper
+	//for the "frec" function to be used in AVIL_shell sketch
+	sFn=$1
+	print "write your file"
+	print " then press ESC"
+	println "+Enter"
+	println ""
+			
+	call frec sFn
+end

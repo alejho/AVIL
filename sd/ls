@@ -1,0 +1,9 @@
+var
+	
+endvar
+
+begin
+	//this program is just a convenient wrapper
+	//for the "ls" function to be used in AVIL_shell sketch
+	call ls	
+end

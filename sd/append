@@ -1,0 +1,15 @@
+var
+string sFn=""
+string sIn=""	
+endvar
+
+begin
+	//this program is just a convenient wrapper
+	//for the "append" function to be used in AVIL_shell sketch
+	
+	//get the input buffers
+	sFn = $1
+	sIn = $2
+	
+	call append sFn sIn	
+end

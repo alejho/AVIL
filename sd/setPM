@@ -1,0 +1,12 @@
+var
+int pin=0
+string sIO=""
+endvar
+
+begin
+	//this program is just a convenient wrapper
+	//for the "setPM" function to be used in AVIL_shell sketch
+	pin=$1
+	sIO=$2
+	call setPM pin sIO
+end

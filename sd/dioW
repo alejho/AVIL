@@ -1,0 +1,12 @@
+var
+int pin = 0
+bool val = false
+endvar
+
+begin
+	//this program is just a convenient wrapper
+	//for the "dioW" function to be used in AVIL_shell sketch
+	pin=$1
+	val=$2
+	call dioW pin val
+end

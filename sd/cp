@@ -1,0 +1,41 @@
+var
+
+string src=""
+string dst=""
+label EXI
+
+endvar
+
+begin
+	
+	//this program is just a convenient wrapper
+	//for the "cp" function to be used in AVIL_shell sketch
+	
+	//copy the file $1
+	//on the file $2
+	//syntax: copy "file1" "file2"
+	
+	//store the files name
+	src = $1
+	dst = $2
+	call fex src
+	if @1==false
+		print "the source file"
+		println " doesn't exists!"
+		goto EXI
+	endif
+	
+	//re-create the destination
+	//file
+	call fex dst
+	if @1==true
+		call rm dst
+	endif	
+	call touch dst
+	
+	//copy the source file
+	call cp src dst
+	
+	EXI:
+	
+end

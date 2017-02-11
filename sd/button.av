@@ -1,0 +1,32 @@
+var
+int n1 = 0
+endvar
+
+begin
+	
+	//toggle a led
+	//with a button
+	
+	//set pin 6 as input for the button
+	call setPM 6 INPUT
+	//set pin 7 as output for led
+	call setPM 7 OUTPUT
+	
+	//infinite loop
+	for n1=0 to 1 step 0
+	
+		call dioR 6
+		//read the output buffer after dioR call execution
+		if @1==true
+		 call dioR 7
+		 if @1==true
+		  call dioW 7 false
+		 else
+		  call dioW 7 true
+		 endif
+		endif
+		
+		delay 200
+		
+	endfor
+end
