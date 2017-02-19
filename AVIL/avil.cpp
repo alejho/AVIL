@@ -263,6 +263,12 @@ bool avil::variablesDeclaration(){
         case (TOKEN_VARS_DECL_END):
             //end of variables declaration reached...nothing to do here!(for the moment)
             break;
+        case (TOKEN_COMMENT):
+            //just a comment...skipt to the next line
+            if(!this->setCurrentProgramLine(m_currentProgramLine.number + 1)){
+                return false;
+            }
+            break;
         default:
             Sys::runtimeError(14, m_currentProgramLine.number);
             return false;
