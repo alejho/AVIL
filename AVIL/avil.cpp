@@ -37,18 +37,12 @@ bool avil::usrPrgInit(char* program_name_and_args){
         Sys::runtimeError(75, m_currentProgramLine.number);
         return false;
     }
-
     //collect the program's arguments
     if(!this->getPrgArguments(program_name_and_args)){
         Sys::runtimeError(76, m_currentProgramLine.number);
         return false;
     }
-
-
     if(!Sys::fileExists(m_programName)){
-        Sys::userOutput(F("error: "));
-        Sys::userOutput(m_programName);
-        Sys::userOutput(F("\n\r"));
         Sys::runtimeError(86, m_currentProgramLine.number);
         return false;
     }
@@ -63,8 +57,7 @@ bool avil::usrPrgInit(char* program_name_and_args){
         return false;
     }
     //reach the program beginning
-    bool l_bUnexpected = false;
-    if(!this->skipToToken(TOKEN_BEGIN, l_bUnexpected) || l_bUnexpected){
+    if(!this->skipToToken(TOKEN_BEGIN)){
         Sys::runtimeError(5, m_currentProgramLine.number);
         return false;
     }
@@ -186,6 +179,20 @@ bool avil::step(){
             return false;
         }
         break;
+    case (TOKEN_SUB):
+        if(!this->subStatement()){
+            return false;
+        }
+        break;
+    case (TOKEN_ENDSUB):
+        //this is trivial...no need of a statement, just roll back to the sub calling line
+        if(m_subProgramLine!=0){
+            if(!this->setCurrentProgramLine(m_subProgramLine + 1)){
+                return false;
+            }
+        }
+        m_subProgramLine = 0;
+        break;
     case (TOKEN_COMMENT):
         //just a comment...skipt to the next line
         if(!this->setCurrentProgramLine(m_currentProgramLine.number + 1)){
@@ -299,7 +306,9 @@ bool avil::booleanVariableDeclaration(){
         return false;
         break;
     };
-    this->setCurrentProgramLine(m_currentProgramLine.number);
+    if(!this->setCurrentProgramLine(m_currentProgramLine.number)){
+        return false;
+    }
     this->skipToToken(TOKEN_VAR_NAME);
     char l_varName[MAX_VARNAMELEN + 1];
     if(!m_tokenizer.getTokenVariableName(l_varName)){
@@ -672,17 +681,23 @@ bool avil::ifStatement(){
     //continue the program or jump to else/endif
     if(l_bIfCondition){
         //continue
-        this->setCurrentProgramLine(m_currentProgramLine.number + 1);
+        if(!this->setCurrentProgramLine(m_currentProgramLine.number + 1)){
+            return false;
+        }
         return true;
     }
     else{
         //jump to else/endif
         int l_programLineCurrent = m_currentProgramLine.number;
         if(this->skipToElse()){
-            this->setCurrentProgramLine(m_currentProgramLine.number + 1);
+            if(!this->setCurrentProgramLine(m_currentProgramLine.number + 1)){
+                return false;
+            }
             return true;
         }
-        this->setCurrentProgramLine(l_programLineCurrent);
+        if(!this->setCurrentProgramLine(l_programLineCurrent)){
+            return false;
+        }
         if(!this->skipToEndif()){
             Sys::runtimeError(55, m_currentProgramLine.number);
             return false;
@@ -755,7 +770,9 @@ bool avil::elseStatement(){
         }
         else{
             //continue
-            this->setCurrentProgramLine(m_currentProgramLine.number + 1);
+            if(!this->setCurrentProgramLine(m_currentProgramLine.number + 1)){
+                return false;
+            }
             return true;
         }
     }
@@ -829,12 +846,9 @@ bool avil::forStatement(){
         }
         if (!UsrPrgData::set(l_varName, l_nResult)){
             Sys::runtimeError(90, m_currentProgramLine.number);
-            Sys::userOutput(F("var name "));
-            Sys::userOutput(l_varName);
-            Sys::userOutput(F("\n"));
             return false;
         }
-        // "to" token
+        //"to" token
         m_tokenizer.next();
         if (m_tokenizer.getToken() != TOKEN_TO){
             Sys::runtimeError(65, m_currentProgramLine.number);
@@ -865,7 +879,9 @@ bool avil::forStatement(){
             return false;
         }
         m_nestedForStack[m_nestedForCounter].endForLineNumber = m_currentProgramLine.number;
-        this->setCurrentProgramLine(l_currProgramLineNumber);
+        if(!this->setCurrentProgramLine(l_currProgramLineNumber)){
+            return false;
+        }
         m_nestedForCounter++;
     }
 
@@ -912,7 +928,6 @@ bool avil::forStatement(){
         m_nestedForStack[i].toValue = 0;
         m_nestedForStack[i].step = 0;
         m_nestedForCounter--;
-
     }
     return true;
 }
@@ -968,7 +983,6 @@ bool avil::endForStatement(){
         Sys::runtimeError(88, m_currentProgramLine.number);
         return false;
     }
-
     if(!this->setCurrentProgramLine(m_nestedForStack[i].forLineNumber)){
         return false;
     }
@@ -980,7 +994,6 @@ bool avil::callStatement(){
     if(m_tokenizer.getToken() == TOKEN_CALL){
         m_tokenizer.next();
     }
-
     //get the program name
     char l_prgName[MAX_PRG_NAME_LENGTH + 1];
     if(!this->getPrgName(m_tokenizer.getCurrStatements(), l_prgName)){
@@ -997,19 +1010,40 @@ bool avil::callStatement(){
         Sys::runtimeError(84, m_currentProgramLine.number);
         return false;
     }
-
     if(!Sys::callPrg(l_prgName)){
         //something went wrong during call execution
         Sys::runtimeError(82, m_currentProgramLine.number);
         return false;
     }
-
     if(!this->setCurrentProgramLine(m_currentProgramLine.number + 1)){
         return false;
     }
-
     return true;
+}
 
+bool avil::subStatement(){
+
+    char l_subName[MAX_VARNAMELEN + 1];
+
+    if(m_subProgramLine != 0){
+        //we are already in a sub (and this is not inception!)
+        Sys::runtimeError(81, m_currentProgramLine.number);
+        return false;
+    }
+    //save the program line number
+    m_subProgramLine = m_currentProgramLine.number;
+    //get the sub name
+    m_tokenizer.next();
+    if(!m_tokenizer.getTokenVariableName(l_subName)){
+        Sys::runtimeError(77, m_currentProgramLine.number);
+        return false;
+    }
+    //execute it...or at least try...
+    if(!this->skipToSub(l_subName)){
+        Sys::runtimeError(78, m_currentProgramLine.number);
+        return false;
+    }
+    return true;
 }
 
 bool avil::setCurrentProgramLine(unsigned int lineNumber){
@@ -1040,7 +1074,6 @@ bool avil::skipToToken(eTokenId token, bool &bUnexpected){
     unsigned int i = m_currentProgramLine.number;
 
     bUnexpected = false;
-
 
     while(m_tokenizer.getToken() != token){
         m_tokenizer.next();
@@ -1075,6 +1108,34 @@ bool avil::expectedTokenSequence(eTokenId tokenSequence[], size_t size){
     return true;
 }
 
+bool avil::skipToSub(char* subName){
+
+    char l_subName[MAX_VARNAMELEN + 1];
+    //starting from the top...
+    this->setCurrentProgramLine(FIRST_PROGRAM_LINE);
+    //in one way or another this loop will end...
+    while(true){
+        //lok for the next sub definition
+        if(!this->skipToToken(TOKEN_BEGSUB)){
+            Sys::runtimeError(79, m_currentProgramLine.number);
+            return false;
+        }
+        //get the sub name
+        m_tokenizer.next();
+        if(!m_tokenizer.getTokenVariableName(l_subName)){
+            Sys::runtimeError(80, m_currentProgramLine.number);
+            return false;
+        }
+        if(strcmp(subName, l_subName)==0){
+            //found it!...execute the sub code
+            if(!this->setCurrentProgramLine(m_currentProgramLine.number+1)){
+                return false;
+            }
+            return true;
+        }
+    }
+}
+
 bool avil::getPrgName(const char *program_name_and_args, char* program_name){
 
     //get the program name from the input cmd (made of program's name and arguments)
@@ -1096,7 +1157,6 @@ bool avil::getPrgArguments(const char *program_name_and_args){
 
     const char* args = program_name_and_args;
     uint8_t len = 0;
-
     //move at the args beginning
     while(isalnum(*args) || *args=='.'){
         ++args;
@@ -1113,7 +1173,6 @@ bool avil::getPrgArguments(const char *program_name_and_args){
     uint8_t i = 1;
 
     while(l_tokenizer.getToken() != TOKEN_ENDOFINPUT){
-
         if (l_tokenizer.getToken() == TOKEN_NUMBER){
             int l_nArg;
             l_tokenizer.getTokenIntValue(l_nArg);
@@ -1172,7 +1231,6 @@ bool avil::getPrgArguments(const char *program_name_and_args){
             if(!l_tokenizer.getTokenVariableName(l_varName)){
                 return false;
             }
-
             if(UsrPrgData::isBoolean(l_varName)){
                 //boolean
                 bool l_bResult = false;
@@ -1197,10 +1255,10 @@ bool avil::getPrgArguments(const char *program_name_and_args){
             l_tokenizer.next();
             i++;
         }
-        else if(l_tokenizer.getToken() == TOKEN_LEFTPAREN || l_tokenizer.getToken() == TOKEN_RIGHTPAREN || l_tokenizer.getToken() == TOKEN_COMMA){
+        //else if(l_tokenizer.getToken() == TOKEN_LEFTPAREN || l_tokenizer.getToken() == TOKEN_RIGHTPAREN || l_tokenizer.getToken() == TOKEN_COMMA){
             //do nothing...just skip to the next
-            l_tokenizer.next();
-        }
+            //l_tokenizer.next();
+        //}
         else{
             //Sys::userOutput("argerr");
             return false;
@@ -1208,4 +1266,3 @@ bool avil::getPrgArguments(const char *program_name_and_args){
     }
     return true;
 }
-

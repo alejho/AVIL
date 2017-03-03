@@ -213,12 +213,12 @@ void Sys::runtimeError(unsigned int errorCode, unsigned int programLine){
             //interpreter error code
             Sys::userOutput(line);
             Sys::userOutput(F("\n\r"));
-        }else{
-            //interpreter error code
-            Sys::userOutput(F("error code: "));
-            Sys::userOutput((int)errorCode);
-            Sys::userOutput(F("\n\r"));
         }
+        //interpreter error code
+        Sys::userOutput(F("error code: "));
+        Sys::userOutput((int)errorCode);
+        Sys::userOutput(F("\n\r"));
+
     }
     else{
         //interpreter error code

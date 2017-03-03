@@ -178,6 +178,7 @@ bool Expressions::IntComparison(bool &result){
 
 bool Expressions::StringComparison(bool &result){
 
+
     //first operand
     char l_sFirstOperand[MAX_STRINGLEN + 1];
     if(!this->getOperand(l_sFirstOperand)){
@@ -210,6 +211,7 @@ bool Expressions::StringComparison(bool &result){
         break;
     };
     return false;
+
 }
 
 bool Expressions::boolOperation(bool &result){
@@ -318,6 +320,7 @@ bool Expressions::IntOperation(int &result){
 
 bool Expressions::StringOperation(char* result){
 
+
     //first operand
     char l_sFirstOperand[MAX_STRINGLEN + 1];
     if(!this->getOperand(l_sFirstOperand)){
@@ -361,6 +364,7 @@ bool Expressions::StringOperation(char* result){
         break;
     };
     return false;
+
 }
 
 bool Expressions::getOperand(bool &op){

@@ -1,0 +1,40 @@
+//this is the blink example made by using subs to turn on/off a led
+
+var
+int n1 = 0
+endvar
+
+beginSub ON
+	call dioW 7 true
+	delay 500
+endSub
+
+beginSub OFF
+	call dioW 7 false
+	delay 500
+endSub
+
+
+begin
+	
+	//set pin 7 as output
+	call setPM 7 OUTPUT
+	
+	print "pin 7 "
+	print "is now an "
+	call getPM 7
+	println ""
+	
+	
+	//infinite loop
+	for n1 = 0 to 1 step 0
+	
+		println "loop!"
+		//turn on led with a sub
+		sub ON
+		//turn off led with a sub
+		sub OFF
+		
+	endfor
+
+end

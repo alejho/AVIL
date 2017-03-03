@@ -29,7 +29,6 @@
 #include "data.h"
 #include "expressions.h"
 #include "sys.h"
-#include "terminal.h"
 
 #pragma GCC diagnostic ignored "-Wswitch"
 
@@ -83,6 +82,8 @@ private:
     for_stack_t m_nestedForStack[MAX_NESTED_IF];
     uint8_t m_nestedForCounter;
 
+    unsigned int m_subProgramLine = 0;
+
     bool usrPrgInit(char *program_name_and_args);
 
     void clearAll();
@@ -108,11 +109,13 @@ private:
     bool skipToEndFor();
     bool endForStatement();
     bool callStatement();
+    bool subStatement();
 
     bool setCurrentProgramLine(unsigned int lineNumber);
     bool skipToToken(eTokenId token);
     bool skipToToken(eTokenId token, bool& bUnexpected);
     bool expectedTokenSequence(eTokenId tokenSequence[], size_t size);
+    bool skipToSub(char* subName);
 
     bool getPrgName(const char *program_name_and_args, char* program_name);
     bool getPrgArguments(const char *program_name_and_args);
