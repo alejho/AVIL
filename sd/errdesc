@@ -1,0 +1,90 @@
+program name is too long
+error retrieving arguments
+program initialization error
+variables declaration error
+begin keyword missing
+program initialization error
+no meaningful token found
+undefined statement
+error adding int argument
+error adding str argument
+invalid program argument
+variables decl. begin missing
+variables decl. end missing
+unexpected token(var type exp.)
+invalid bool var decl(too long?)
+invalid boolean variable init
+invalid boolean variable name
+error adding bool variable
+invalid num var decl(too long?)
+invalid num variable name
+invalid num variable init
+error adding num variable
+invalid label decl(too long?)
+invalid label name
+error adding label variable
+invalid str var decl(too long?)
+invalid string variable name
+invalid string variable init
+error adding string variable
+unexpected token (var name exp.)
+unexpected var type (label exp.)
+unexpected token
+goto label not found
+unexpected token (":" expected)
+goto destination not valid
+invalid variable name
+invalid print argument
+invalid print argument
+unexpected token (var name exp.)
+invalid variable name
+input string is too long
+unexpected var type (string exp)
+unexpected token (var name exp.)
+invalid variable name
+input string is too long
+unexpected var type (num exp.)
+invalid variable name
+unexpected token ("=" expected)
+boolean assignment failed
+integer assignement failed
+string assignment failed
+unexpected variable type
+if condition's evaluation failed
+max number of nested if reached
+if doesn't match else/endif
+"endif" not found
+internal interpreter error
+if doesn't match else/endif
+if doesn't match else/endif
+max number of nested for reached
+invalid variable name
+unexpected token ("=" expected)
+invalid for index starting value
+unable to get for variable
+unexpected token ("to" expected)
+invalid for index end value
+unexpected token ("step" exp.)
+invalid step value
+for doesn't match endfor
+for doesn't match endfor
+internal interpreter error
+invalid variable name
+error reading program line
+system initialization error
+invalid program name
+invalid program arguments
+error while getting sub name
+can't find the requested sub
+no sub token detected
+error while getting sub name
+can't run a sub from a sub!
+call failed
+invalid call name
+invalid call args declaration
+call to a not existing function
+AVIL program doesn't exist
+unable to get for variable
+unable to update for variable
+error reading string(too long?)
+error setting for loop index
