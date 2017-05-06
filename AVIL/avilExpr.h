@@ -21,8 +21,8 @@
 #ifndef EXPRESSIONS_H
 #define EXPRESSIONS_H
 #include "compopt.h"
-#include "tokenizer.h"
-#include "data.h"
+#include "avilTok.h"
+#include "avilData.h"
 
 class Expressions
 {

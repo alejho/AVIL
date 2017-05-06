@@ -34,8 +34,10 @@
 #define SYSTEM ARDU_UNO
 
 #if SYSTEM == ARDU_UNO
-    //userInput/Output over ethernet
-    #define ETH_IO
+
+    //userInput/Output over ethernet (comment for use serial)
+    //#define ETH_IO
+
     #ifdef ETH_IO
         //ip address www.xxx.yyy.zzz
         #define IP_www  192
@@ -45,8 +47,17 @@
         //telnet\webServer port
         #define PORT 23
     #endif
-    //additional debug functions
+
+    //meArm controller extension
+    //#define MEARM
+    #ifdef MEARM
+        //when using avil as meArm controller ehternet will be disabled!
+        #undef ETH_IO
+    #endif
+
+    //debug additional functions
     //#define DEBUG
+
 #endif
 
 
@@ -65,17 +76,17 @@
 #define MAX_NUMLEN  5
 //max chars number of a variable's name (2 is the minimum)
 #define MAX_VARNAMELEN  3
-//////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////
 
 
-/////////////////////////////////EXECUTION//////////////////////////////////////
+/////////////////////////////////EXECUTION///////////////////////////////////////////////
 //max number of nested if's in one program
 #define MAX_NESTED_IF 2
 //max number of nested for's loop in one program
 #define MAX_NESTED_FOR 2
 /////////////////////////////////////////////////////////////////////////////////////////
 
-/////////////////////////////////MEMORY///////////////////////////////////
+/////////////////////////////////MEMORY/////////////////////////////////////////////////
 //boolean variables number
 #define MAX_BOOL_NUM 5
 //integer variables number

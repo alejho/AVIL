@@ -18,33 +18,48 @@
  * 
  * 
  */
-#if SYSTEM == PC
 
-#ifndef PC_SYS_H
-#define PC_SYS_H
+#ifndef ARDUINO_SYS_H
+#define ARDUINO_SYS_H
 
 #include "compopt.h"
+#if SYSTEM == ARDU_UNO
 
-#include "stdlib.h"
-#include "iostream"
-#include "fstream"
-#include <string.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+#include <Fat16.h>
+const uint8_t CHIP_SELECT = 4;
 
-typedef struct fakePinStruct{
-    bool isInput;
-    bool status;
-}fakePin_t;
+#ifdef ETH_IO
+    #include <Ethernet.h>
+    const uint8_t CHIP_SELECT_ETH = 10;
+#endif
 
+#ifdef MEARM
+    //pins 4,10,11,12,13 are for ethernet shield
+    #include <Servo.h>
+    const uint8_t LEFT_SERVO_PIN = 9;
+    const uint8_t RIGHT_SERVO_PIN = 8;
+    const uint8_t BASE_SERVO_PIN = 7;
+    const uint8_t GRIPPER_SERVO_PIN = 6;
+
+    const uint8_t BASE_SERVO_ID = 1;
+    const uint8_t RIGHT_SERVO_ID = 2;
+    const uint8_t LEFT_SERVO_ID = 3;
+    const uint8_t GRIPPER_SERVO_ID = 4;
+
+    const uint8_t GRIPPER_CLOSE_POS = 170;
+    const uint8_t GRIPPER_OPEN_POS = 90;
+
+#endif
+
+
+const uint8_t KILL_KEY = 27;
 
 bool ls();
 bool free();
 bool setPinMode();
 bool setPinStatus();
 bool getPinStatus();
-bool isInput(unsigned int pin);
+bool isInput(int pin);
 bool getPinMode();
 bool idle();
 bool cat();
@@ -55,13 +70,22 @@ bool append();
 bool fgetl();
 bool flen();
 bool fex();
+bool frec();
+bool waitDio();
+#ifdef MEARM
+bool getKey();
+bool jointStep(uint8_t servoId, int8_t step);
+bool manCmd();
+bool writePos();
+bool teachPos();
+bool openGripper();
+bool closeGripper();
+bool movej();
+#endif
+
 #ifdef DEBUG
 bool memDump();
 #endif
-
-//add custom function's prototypes here:
-//bool foo();
-
 
 #endif
 #endif

@@ -7,7 +7,7 @@ char cmd[30];
 
 void setup(void) {
   if(!interpreter.init()){
-      Sys::userOutput(F("init error\n\r"));
+      Sys::userOutput(F("\n\rinit error\n\r"));
       while(1);
   }
   cmd[0]='\0';

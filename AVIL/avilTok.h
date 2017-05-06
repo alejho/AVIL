@@ -25,7 +25,7 @@
 #include <ctype.h> //isdigit, isalnum
 #include <stdlib.h> //atoi
 #include <string.h> //strlen
-#include "keywords.h"
+#include "avilKeywords.h"
 
 class Tokenizer
 {

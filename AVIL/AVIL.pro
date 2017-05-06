@@ -4,23 +4,26 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += main.cpp \
-    expressions.cpp \
-    tokenizer.cpp \
     avil.cpp \
-    arduinoSys.cpp \
-    pcSys.cpp \
-    data.cpp
+    sysArduinoUNO.cpp \
+    sysPC.cpp \
+    avilData.cpp \
+    avilExpr.cpp \
+    avilTok.cpp
 
 include(deployment.pri)
 
 HEADERS += \
-    expressions.h \
-    keywords.h \
-    tokenizer.h \
     avil.h \
     compopt.h \
     sys.h \
-    arduinoSys.h \
-    pcSys.h \
-    data.h
+    sysArduinoUNO.h \
+    sysPC.h \
+    avilData.h \
+    avilExpr.h \
+    avilTok.h \
+    avilKeywords.h
 
+
+unix: CONFIG += link_pkgconfig
+unix: PKGCONFIG += ncurses

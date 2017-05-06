@@ -24,16 +24,16 @@
 
 #include "compopt.h"
 
-#include "tokenizer.h"
-#include "data.h"
-#include "expressions.h"
+#include "avilTok.h"
+#include "avilData.h"
+#include "avilExpr.h"
 #include "sys.h"
 
 #pragma GCC diagnostic ignored "-Wswitch"
 
 typedef struct programLineStruct{
 
-    char statements[MAX_FILE_LINE_LENGTH];
+    char statements[MAX_FILE_LINE_LENGTH+1];
     unsigned int number;
 }programLine_t;
 
@@ -81,7 +81,7 @@ private:
     for_stack_t m_nestedForStack[MAX_NESTED_IF];
     uint8_t m_nestedForCounter;
 
-    unsigned int m_subProgramLine = 0;
+    unsigned int m_subProgramLine;
 
     bool usrPrgInit(char *program_name_and_args);
 

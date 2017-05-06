@@ -26,6 +26,8 @@ avil::avil()
 
 bool avil::init(){
     return Sys::init();
+    m_subProgramLine = 0;
+
 }
 
 bool avil::usrPrgInit(char* program_name_and_args){
@@ -539,6 +541,7 @@ bool avil::getStrStatement(){
         return false;
     }
     char l_sInput[MAX_STRINGLEN+1];
+    l_sInput[0]='\0';
     if(!Sys::userInput(l_sInput, MAX_STRINGLEN+1)){
         Sys::runtimeError(41, m_currentProgramLine.number);
         return false;
@@ -606,6 +609,8 @@ bool avil::assignmentStatement(){
 
     if(!m_tokenizer.getTokenVariableName(l_varName)){
         Sys::runtimeError(47, m_currentProgramLine.number);
+        Sys::userOutput(l_varName);
+        Sys::userOutput("\n\r");
         return false;
     }
     m_tokenizer.next();
@@ -1076,7 +1081,13 @@ bool avil::skipToToken(eTokenId token, bool &bUnexpected){
     bUnexpected = false;
 
     while(m_tokenizer.getToken() != token){
+        //Sys::userOutput(F("loop\n\r"));
         m_tokenizer.next();
+        //Sys::userOutput(F("token: "));
+        //Sys::userOutput(int(m_tokenizer.getToken()));
+        //Sys::userOutput(m_tokenizer.getCurrStatements());
+        //Sys::userOutput("\n\r");
+
         //if(m_tokenizer.getToken() == TOKEN_ENDOFINPUT || m_tokenizer.getToken() == TOKEN_CR){
         if(m_tokenizer.getToken() == TOKEN_ENDOFINPUT){
             i++;
@@ -1171,16 +1182,26 @@ bool avil::getPrgArguments(const char *program_name_and_args){
     l_tokenizer.next();
 
     uint8_t i = 1;
+    bool l_bNegativeNum = false;
 
     while(l_tokenizer.getToken() != TOKEN_ENDOFINPUT){
         if (l_tokenizer.getToken() == TOKEN_NUMBER){
             int l_nArg;
             l_tokenizer.getTokenIntValue(l_nArg);
+            if (l_bNegativeNum) l_nArg=-l_nArg;
             if(!IOData::setArg(i, l_nArg)){
                 return false;
             }
             l_tokenizer.next();
             i++;
+        }
+        else if(l_tokenizer.getToken() == TOKEN_MINUS){
+            l_bNegativeNum = true;
+            l_tokenizer.next();
+        }
+        else if(l_tokenizer.getToken() == TOKEN_PLUS){
+            l_bNegativeNum = false;
+            l_tokenizer.next();
         }
         else if(l_tokenizer.getToken() == TOKEN_STRING){
             char l_sArg[MAX_STRINGLEN + 1];

@@ -1,22 +1,22 @@
-/* 
+/*
  * Copyright 2017 Alessio Villa
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301, USA.
- * 
- * 
+ *
+ *
  */
 
 
@@ -43,7 +43,23 @@ const sysPrograms_t systemProgams[] PROGMEM = {
     {"flen", &flen},
     {"fex", &fex},
     {"frec", &frec},
-    //add here your custom function
+    {"waitDio", &waitDio},
+    #ifdef MEARM
+    {"getKey", &getKey},
+    {"manCmd", &manCmd},
+    {"teachPos", &teachPos},
+    {"open", &openGripper},
+    {"close", &closeGripper},
+    {"movej", &movej},
+    #endif
+    //add here your custom functions!
+
+
+
+
+
+
+
 
     #ifdef DEBUG
     {"memDump", &memDump},
@@ -53,10 +69,21 @@ const sysPrograms_t systemProgams[] PROGMEM = {
 };
 
 #ifdef ETH_IO
-EthernetServer server(PORT);
+    EthernetServer server(PORT);
+#endif
+#ifdef MEARM
+    Servo leftServo;
+    Servo rightServo;
+    Servo baseServo;
+    Servo gripperServo;
+    unsigned int leftServoLastPos = 0;
+    unsigned int rightServoLastPos = 0;
+    unsigned int baseServoLastPos = 0;
+    bool gripperIsOpen = false;
 #endif
 
 SdCard SD;
+Fat16 File;
 
 Sys::Sys()
 {
@@ -66,7 +93,6 @@ bool Sys::init(){
 
 
 #ifdef ETH_IO
-
     byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
     IPAddress ip(IP_www, IP_xxx, IP_yyy, IP_zzz);
     Ethernet.begin(mac, ip);
@@ -75,6 +101,26 @@ bool Sys::init(){
     #endif
 #else
     Serial.begin(9600);
+#endif
+
+#ifdef MEARM
+    leftServo.attach(LEFT_SERVO_PIN, 500, 2400);
+    rightServo.attach(RIGHT_SERVO_PIN, 500, 2400);
+    baseServo.attach(BASE_SERVO_PIN, 500, 2400);
+    gripperServo.attach(GRIPPER_SERVO_PIN, 500, 2400);
+
+    leftServo.write(90);
+    leftServoLastPos=90;
+
+    rightServo.write(100);
+    rightServoLastPos=100;
+
+    baseServo.write(90);
+    baseServoLastPos=90;
+
+    gripperServo.write(GRIPPER_CLOSE_POS);
+    gripperIsOpen=false;
+
 #endif
 
     if (!SD.begin(CHIP_SELECT)){
@@ -91,9 +137,13 @@ bool Sys::init(){
 
 bool Sys::fileExists(const char* fileName){
 
-    Fat16 File;
+    //Fat16 File;
+    if(File.isOpen()){
+        File.close();
+    }
 
     if (!File.open(fileName, O_READ)) {
+        //Sys::userOutput(F("fnex"));
         return false;
     }
     File.close();
@@ -105,8 +155,10 @@ bool Sys::getFileLine(char* fileName, unsigned int lineNumber, char* line){
     char l_lineStatements[MAX_FILE_LINE_LENGTH + 1];
     Fat16 File;
 
-    if (!File.open(fileName, O_READ)) {
-        return false;
+    if(!File.isOpen()){
+        if (!File.open(fileName, O_READ)) {
+            return false;
+        }
     }
 
     unsigned int i = 0;
@@ -159,7 +211,7 @@ bool Sys::userInput(char* dst, size_t size){
                   rc = client.read();
                   if(rc>0){
                       if(i>=size){
-                          Sys::userOutput(F("command exceeding buffer size\n"));
+                          Sys::userOutput(F("command exceeding buffer size\n\r"));
                           return false;
                       }
                       if (rc != '\r' && rc != '\n'){
@@ -183,24 +235,30 @@ bool Sys::userInput(char* dst, size_t size){
 
         while(true){
 
-            rc = Serial.read();
-            if(rc>0){
-                if (rc != '\r' && rc != '\n'){
-                    //echo
-                    Sys::userOutput(rc);
-                    l_input[i] = rc;
-                    i++;
-                }
-                else if(rc=='\r' && i>0){
-                    l_input[i] = '\0'; // terminate the string
-                    strcpy(dst, l_input);
-                    return true;
-                }
-                if(i>=size){
-                    Sys::userOutput(F("command exceeding buffer size"));
-                    return false;
+            if(Serial.available() > 0){
+                rc = Serial.read();
+                if(rc>0){
+                    if (rc != '\r' && rc != '\n'){
+                        //echo
+                        Sys::userOutput(rc);
+                        l_input[i] = rc;
+                        i++;
+                    }
+                    else if(rc=='\r' && i>0){
+                        l_input[i] = '\0'; // terminate the string
+                        strcpy(dst, l_input);
+                        return true;
+                    }
+                    if(i>=size){
+                        Sys::userOutput(F("command exceeding buffer size\n\r"));
+                        return false;
+                    }
                 }
             }
+            else{
+                rc=0;
+            }
+
         }
     #endif
 }
@@ -335,7 +393,7 @@ void Sys::runtimeError(unsigned int errorCode, unsigned int programLine){
             Sys::userOutput(line);
             Sys::userOutput(F("\n\r"));
         }
-    }  
+    }
     //interpreter error code
     Sys::userOutput(F("error code: "));
     Sys::userOutput((int)errorCode);
@@ -345,7 +403,7 @@ void Sys::runtimeError(unsigned int errorCode, unsigned int programLine){
 bool ls(){
 
     #ifdef ETH_IO
-        Fat16 File;
+        //Fat16 File;
         dir_t dir;
         for (uint16_t index = 0; File.readDir(&dir, &index, DIR_ATT_VOLUME_ID); index++) {
             for (uint8_t j = 0; j < 11; j++) {
@@ -356,6 +414,7 @@ bool ls(){
             Sys::userOutput(F(" bytes\n"));
         }
     #else
+        //File.close();
         Fat16::ls(LS_SIZE);
     #endif
 
@@ -542,7 +601,11 @@ bool cat(){
 
     //print the content of arg1 file to system output
     char* l_sArg1;
-    Fat16 File;
+    //Fat16 File;
+
+    if(File.isOpen()){
+        File.close();
+    }
 
     if(IOData::getArg(1, l_sArg1)){
         if(Sys::fileExists(l_sArg1)){
@@ -562,6 +625,7 @@ bool cat(){
                 #endif
 
             } while (c>0);
+            File.close();
             return true;
         }
         else{
@@ -582,7 +646,10 @@ bool touch(){
     //create a file named arg1
     char* l_sArg1;
 
-    Fat16 File;
+    //Fat16 File;
+    if(File.isOpen()){
+        File.close();
+    }
 
     if(IOData::getArg(1, l_sArg1)){
         if (!File.open(l_sArg1, O_CREAT | O_EXCL | O_WRITE)){
@@ -604,10 +671,13 @@ bool copy(){
     //dst
     char* l_sArg2;
 
-    Fat16 srcFile, dstFile;
+    if(File.isOpen()){
+        File.close();
+    }
+    Fat16 dstFile;
 
     if(IOData::getArg(1, l_sArg1) && IOData::getArg(2, l_sArg2)){
-        if (!srcFile.open(l_sArg1, O_READ)){
+        if (!File.open(l_sArg1, O_READ)){
             Sys::userOutput(F("cp: this file doesn't exist: "));
             Sys::userOutput(l_sArg1);
             Sys::userOutput(F("\n\r"));
@@ -619,13 +689,13 @@ bool copy(){
         char buf[10];
         int16_t n;
 
-        while ((n = srcFile.read(buf, sizeof(buf))) > 0) {
+        while ((n = File.read(buf, sizeof(buf))) > 0) {
             if (dstFile.write(buf, n) != n){
                 Sys::userOutput(F("cp: error\n\r"));
                 return false;
             }
         }
-        srcFile.close();
+        File.close();
         dstFile.close();
         return true;
     }
@@ -641,7 +711,10 @@ bool rm(){
     //remove a file named arg1
     char* l_sArg1;
 
-    Fat16 File;
+    //Fat16 File;
+    if(File.isOpen()){
+        File.close();
+    }
 
     if(IOData::getArg(1, l_sArg1)){
         if (File.open(l_sArg1, O_WRITE)){
@@ -670,7 +743,10 @@ bool append(){
     char* l_sArg1;
     char* l_sArg2;
 
-    Fat16 File;
+    //Fat16 File;
+    if(File.isOpen()){
+        File.close();
+    }
 
     if(IOData::getArg(1, l_sArg1) && IOData::getArg(2, l_sArg2)){
         if (File.open(l_sArg1, O_APPEND | O_WRITE)){
@@ -702,13 +778,17 @@ bool fgetl(){
     char* l_sArg1;
     int l_nArg2;
 
+    if(File.isOpen()){
+        File.close();
+    }
+
     if(IOData::getArg(1, l_sArg1) && IOData::getArg(2, l_nArg2)){
         char line[MAX_FILE_LINE_LENGTH+1];
         line[0]='\0';
         if(!Sys::getFileLine(l_sArg1, l_nArg2, line)){
-            Sys::userOutput(F("line: "));
-            Sys::userOutput(l_nArg2);
-            Sys::userOutput(F(" \n"));
+            //Sys::userOutput(F("line: "));
+            //Sys::userOutput(l_nArg2);
+            //Sys::userOutput(F(" \n"));
             return false;
         }
         if(!IOData::setOutVal(1, line)){
@@ -722,6 +802,10 @@ bool fgetl(){
 bool flen(){
 
     char* l_sArg1;
+
+    if(File.isOpen()){
+        File.close();
+    }
 
     if(IOData::getArg(1, l_sArg1)){
         char line[MAX_FILE_LINE_LENGTH+1];
@@ -738,8 +822,10 @@ bool flen(){
 
 bool fex(){
 
-    char* l_sArg1;
     //write true in the output buffer if a file exists
+
+    char* l_sArg1;
+
     if(IOData::getArg(1, l_sArg1)){
         //this function rely on the standard system interface function
         if(Sys::fileExists(l_sArg1)){
@@ -759,12 +845,14 @@ bool fex(){
 bool frec(){
 
     //receive a file char by char from the input and redirect it to l_sArg1
-    Fat16 File;
+    //Fat16 File;
+    if(File.isOpen()){
+        File.close();
+    }
 
     char* l_sArg1;
-    //write true in the output buffer if a file exists
     if(IOData::getArg(1, l_sArg1)){
-        byte rc=0;
+        char rc=0;
         if(!File.open(l_sArg1, O_WRITE | O_CREAT)){
             Sys::userOutput(F("error opening "));
             Sys::userOutput(l_sArg1);
@@ -774,42 +862,51 @@ bool frec(){
         }
         while(rc!=KILL_KEY){
 
-        #ifdef ETH_IO
-            EthernetClient client = server.available();
-            if (client) {
-                if (client.available() > 0) {
-                    // read the byte incoming from the client:
-                    rc = client.read();
+            #ifdef ETH_IO
+                //read input from ethernet
+                EthernetClient client = server.available();
+                if (client) {
+                    if (client.available() > 0) {
+                        // read the byte incoming from the client:
+                        rc = client.read();
+                    }
                 }
-            }
-        #else
-            rc = Serial.read();
-            if(rc>0){
-                //echo to bash
-                if(rc=='\r'){
-                    Serial.print(F("\n\r"));
+            #else
+                //read input from serial
+                if(Serial.available() > 0){
+                    rc = Serial.read();
+                    if(rc>0 && rc!=255 && rc!=KILL_KEY){
+                        //echo to bash
+                        if(rc=='\r'){
+                            Serial.print(F("\n\r"));
+                        }
+                        else{
+                            Serial.print(rc);
+                        }
+                    }
                 }
                 else{
-                    Serial.print(rc);
+                    rc=0;
                 }
-            }
-        #endif
-            if(rc>0 && rc!=KILL_KEY){
-                #ifdef ETH_IO
-                    File.write(rc);
-                #else
-                    if(rc=='\r'){
-                        File.write('\n');
-                        File.write('\r');
-                    }
-                    else{
+            #endif
+                //write it to the file
+                if(rc>0 && rc!=255 && rc!=KILL_KEY){
+                    #ifdef ETH_IO
                         File.write(rc);
-                    }
-                #endif
-                rc=0;
-            }
+                    #else
+                        if(rc=='\r'){
+                            File.write('\n');
+                            File.write('\r');
+                        }
+                        else{
+                            File.write(rc);
+                        }
+                    #endif
+                    rc=0;
+                }
         }
         File.close();
+        return true;
     }
     else{
         Sys::userOutput(F("usage: frec filename\n\r"));
@@ -819,15 +916,309 @@ bool frec(){
 
 }
 
+bool waitDio(){
+
+    int l_nArg1;
+
+    if(IOData::getArg(1, l_nArg1)){
+
+        bool l_bRes = false;
+        do {
+            getPinStatus();
+            IOData::getOutVal(1, l_bRes);
+        }while (!l_bRes);
+        return true;
+    }
+    return false;
+}
+
+#ifdef MEARM
+
+int jointControl(Servo joint, int currentPos, int setPoint){
+
+    //move the given joint one step in the direction of the set point
+    //return the new position of the servo
+
+    if(currentPos == setPoint){
+        //don't move...you're arrived!
+        return currentPos;
+    }
+    else if(currentPos<setPoint){
+        joint.write(currentPos+1);
+        return ++currentPos;
+    }
+    else if(currentPos>setPoint){
+        joint.write(currentPos-1);
+        return --currentPos;
+    }
+}
+
+bool jointStep(uint8_t servoId, int8_t step){
+
+
+    switch (servoId) {
+    case BASE_SERVO_ID:
+        baseServoLastPos = jointControl(baseServo, baseServoLastPos, baseServoLastPos+step);
+        Sys::userOutput(F("Base servo step "));
+        break;
+    case RIGHT_SERVO_ID:
+        rightServoLastPos = jointControl(rightServo, rightServoLastPos, rightServoLastPos+step);
+        Sys::userOutput(F("Right servo step "));
+        break;
+    case LEFT_SERVO_ID:
+        leftServoLastPos = jointControl(leftServo, leftServoLastPos, leftServoLastPos+step);
+        Sys::userOutput(F("Left servo step "));
+        break;
+    default:
+        return false;
+        break;
+    }
+    Sys::userOutput(step);
+    Sys::userOutput(F("\n\r"));
+
+    return true;
+}
+
+bool getKey(){
+
+    char key = 0;
+
+    do{
+       key = Serial.read();
+    }while(key<=0);
+
+    char l_sKey[2];
+    l_sKey[0]=key;
+    l_sKey[1]='\0';
+
+    if(!IOData::setOutVal(1, l_sKey)){
+            return false;
+    }
+
+    return true;
+}
+
+bool manCmd(){
+
+    char* l_sArg1;
+
+    if(IOData::getArg(1, l_sArg1)){
+
+        switch(l_sArg1[0])
+        {
+        case ('q'):
+            //left servo +1
+            jointStep(LEFT_SERVO_ID, 1);
+            break;
+        case ('a'):
+            //left servo -1
+            jointStep(LEFT_SERVO_ID, -1);
+            break;
+        case ('r'):
+            //right servo +1
+            jointStep(RIGHT_SERVO_ID, 1);
+            break;
+        case ('d'):
+            //right servo -1
+            jointStep(RIGHT_SERVO_ID, -1);
+            break;
+        case ('x'):
+            //base servo +1
+            jointStep(BASE_SERVO_ID, 1);
+            break;
+        case ('c'):
+            //base servo -1
+            jointStep(BASE_SERVO_ID, -1);
+            break;
+        case ('g'):
+            //toggle gripper
+            gripperIsOpen? closeGripper():openGripper();
+            break;
+        default:
+            //opzionale
+            break;
+        };
+        return true;
+    }
+    else{
+        Sys::userOutput(F("usage: movej posname\n\r"));
+        return false;
+    }
+}
+
+bool writePos(char* posName){
+
+    char l_sPos[MAX_NUMLEN+1];
+
+    if(!IOData::setArg(1, "posDB")) return false;
+
+    //pos name
+    if(!IOData::setArg(2, posName)) return false;
+    append();
+    //base
+    l_sPos[0] = '\0';
+    sprintf(l_sPos, "%u", baseServoLastPos);
+    if(!IOData::setArg(2, l_sPos)) return false;
+    append();
+    //right
+    l_sPos[0] = '\0';
+    sprintf(l_sPos, "%u", rightServoLastPos);
+    if(!IOData::setArg(2, l_sPos)) return false;
+    append();
+    //left
+    l_sPos[0] = '\0';
+    sprintf(l_sPos, "%u", leftServoLastPos);
+    if(!IOData::setArg(2, l_sPos)) return false;
+    append();
+
+    return true;
+}
+
+bool teachPos(){
+
+    char* l_sArg1;
+    char l_sPosName[MAX_STRINGLEN+1];
+
+    if(!IOData::getArg(1, l_sArg1)) return false;
+    l_sPosName[0]='\0';
+    strncat(l_sPosName, l_sArg1, MAX_STRINGLEN);
+
+    //check if the pos file already exists...if not create it
+    if(!IOData::setArg(1, "posDB")) return false;
+    if (!Sys::fileExists("posDB")){
+        if(!touch()) return false;
+    }
+
+    //check if the "pos" already exists!
+
+    char* l_newLine;
+    char* l_sCurrLine;
+    char* l_sKey;
+    bool l_isNewPosition = true;
+    bool l_bReadOk = false;
+    int lineNumber = 1;
+
+    do {
+        if(!IOData::setArg(2, lineNumber)) return false;
+        l_bReadOk = fgetl() && IOData::getOutVal(1, l_sCurrLine);
+        if(l_bReadOk){
+            //remove trailing \n if exists
+            if ((l_newLine=strchr(l_sCurrLine, '\n')) != NULL) *l_newLine = '\0';
+            if(strncmp(l_sCurrLine, l_sPosName, strlen(l_sPosName))==0) l_isNewPosition = false;
+        }
+        lineNumber++;
+    }while(l_bReadOk && l_isNewPosition);
+    //File.close()
+
+    if(l_isNewPosition){
+        //new position...just write
+        if(!writePos(l_sPosName)) return false;
+        Sys::userOutput(F("\n\r saved!\n\r"));
+        return true;
+    }
+    else{
+        //already existing
+        Sys::userOutput(F("\n\rdo you wan to overwrite this position?(y/n): "));
+        getKey();
+        if(!IOData::getOutVal(1, l_sKey)) return false;
+        if(l_sKey[0]=='y'){
+            Sys::userOutput(F("\n\r sorry...I still have to do this...\n\r"));
+        }
+        Sys::userOutput(F("\n\r saved!\n\r"));
+        return true;
+        }
+    }
+
+bool openGripper(){
+    //open gripper
+    gripperServo.write(GRIPPER_OPEN_POS);
+    gripperIsOpen = true;
+    return true;
+}
+
+bool closeGripper(){
+    //close gripper
+    gripperServo.write(GRIPPER_CLOSE_POS);
+    gripperIsOpen = false;
+    return true;
+}
+
+bool movej(){
+
+    char* l_sArg1;
+    int l_nArg2;
+    char l_sPosName[MAX_STRINGLEN+1];
+    char* l_sCurrLine;
+
+    if(!IOData::getArg(1, l_sArg1) || !IOData::getArg(2, l_nArg2)){
+        Sys::userOutput(F("usage: movej pos_name speed_perc\n\r"));
+        return false;
+    }
+    //trim speed value
+    if(l_nArg2>100) l_nArg2=100;
+    if(l_nArg2<1) l_nArg2=1;
+    //copy locally the position's name
+    strncpy(l_sPosName, l_sArg1, MAX_STRINGLEN);
+    int lineNumber = 1;
+
+    if(!IOData::setArg(1, "posDB")) return false;
+
+    char* l_newLine;
+
+    do{
+        IOData::setArg(2, lineNumber);
+        if(!fgetl() && IOData::getOutVal(1, l_sCurrLine)) return false;
+        //remove trailing \n if exists
+        if ((l_newLine=strchr(l_sCurrLine, '\n')) != NULL) *l_newLine = '\0';
+        lineNumber++;
+
+     } while(strcmp(l_sCurrLine, l_sPosName)!=0);
+
+    //the next 3 rows contains the servo values of the wanted pos!
+
+    //base servo set-point
+    //set arguments for fgetl
+    if(!IOData::setArg(1, "posDB") || !IOData::setArg(2, lineNumber)) return false;
+    //execute and get fgetl's result
+    if (!fgetl() || !IOData::getOutVal(1, l_sCurrLine)) return false;
+    int l_nBaseServoPosSP = atoi(l_sCurrLine);
+
+    //right servo set-point
+    //set arguments for fgetl
+    if (!IOData::setArg(1, "posDB") || !IOData::setArg(2, lineNumber+1)) return false;
+    //execute and get fgetl's result
+    if (!fgetl() || !IOData::getOutVal(1, l_sCurrLine)) return false;
+    int l_nRightServoPosSP = atoi(l_sCurrLine);
+    //left servo set-point
+    //set arguments for fgetl
+    if(!IOData::setArg(1, "posDB") || !IOData::setArg(2, lineNumber+2)) return false;
+    //execute and get fgetl's result
+    if (!fgetl() || !IOData::getOutVal(1, l_sCurrLine)) return false;
+    int l_nLeftServoPosSP = atoi(l_sCurrLine);
+    //now execute the movement one step at time
+    bool l_bSkipStep=false;
+    while(baseServoLastPos != l_nBaseServoPosSP || rightServoLastPos != l_nRightServoPosSP || leftServoLastPos != l_nLeftServoPosSP){
+        //the base rotate half the speed of the other joints
+        l_bSkipStep = !l_bSkipStep;
+        if(!l_bSkipStep) baseServoLastPos = jointControl(baseServo, baseServoLastPos, l_nBaseServoPosSP);
+        rightServoLastPos = jointControl(rightServo, rightServoLastPos, l_nRightServoPosSP);
+        leftServoLastPos = jointControl(leftServo, leftServoLastPos, l_nLeftServoPosSP);
+        delay((100 - l_nArg2) + 20);
+    }
+    //movement finished!
+    return true;
+}
+
+#endif
 
 #ifdef DEBUG
 bool memDump(){
 
 
-    Sys::userOutput(F("\n-------MEMDUMP------\n"));
+    Sys::userOutput(F("\n\r-------MEMDUMP------\n\r"));
 
     //booleans
-    Sys::userOutput(F("booleans:\n"));
+    Sys::userOutput(F("booleans:\n\r"));
     for (uint8_t i = 0; i < MAX_BOOL_NUM; ++i){
         Sys::userOutput(prgData.booleans[i].name);
         Sys::userOutput(F(": "));
@@ -837,32 +1228,32 @@ bool memDump(){
         else{
             Sys::userOutput("false");
         }
-        Sys::userOutput(F("\n"));
+        Sys::userOutput(F("\n\r"));
     }
     //integers
-    Sys::userOutput(F("integers:\n"));
+    Sys::userOutput(F("integers:\n\r"));
     for (uint8_t i = 0; i < MAX_INT_NUM; ++i){
        Sys::userOutput(prgData.integers[i].name);
        Sys::userOutput(F(": "));
        Sys::userOutput(prgData.integers[i].value);
-       Sys::userOutput(F("\n"));
+       Sys::userOutput(F("\n\r"));
     }
     //strings
-    Sys::userOutput(F("strings:\n"));
+    Sys::userOutput(F("strings:\n\r"));
     for (uint8_t i = 0; i < MAX_STRING_NUM; ++i){
         Sys::userOutput(prgData.strings[i].name);
         Sys::userOutput(F(": "));
         Sys::userOutput(prgData.strings[i].value);
-        Sys::userOutput(F("\n"));
+        Sys::userOutput(F("\n\r"));
     }
     //labels
-    Sys::userOutput(F("labels:\n"));
+    Sys::userOutput(F("labels:\n\r"));
     for (uint8_t i = 0; i < MAX_LABEL_NUM; ++i){
         Sys::userOutput(prgData.labels[i].name);
-        Sys::userOutput(F("\n"));
+        Sys::userOutput(F("\n\r"));
     }
     //inArgs
-    Sys::userOutput(F("arguments:\n"));
+    Sys::userOutput(F("arguments:\n\r"));
     for (uint8_t i = 0; i < MAX_INPUT_ARGS_NUM; ++i){
         if(inArgs[i].isBoolean){
             Sys::userOutput(F("arg"));
@@ -873,21 +1264,21 @@ bool memDump(){
             else{
                 Sys::userOutput(F(": false"));
             }
-            Sys::userOutput(F("\n"));
+            Sys::userOutput(F("\n\r"));
         }
         else if(inArgs[i].isInteger){
             Sys::userOutput(F("arg"));
             Sys::userOutput(i+1);
             Sys::userOutput(F(": "));
             Sys::userOutput(inArgs[i].value.integer);
-            Sys::userOutput(F("\n"));
+            Sys::userOutput(F("\n\r"));
         }
         else if(inArgs[i].isString){
             Sys::userOutput(F("arg"));
             Sys::userOutput(i+1);
             Sys::userOutput(F(": "));
             Sys::userOutput(inArgs[i].value.string);
-            Sys::userOutput(F("\n"));
+            Sys::userOutput(F("\n\r"));
         }
     }
 

@@ -19,6 +19,7 @@
  * 
  */
 #include "sys.h"
+
 #if SYSTEM == PC
 
 const sysPrograms_t systemProgams[] = {
@@ -38,6 +39,14 @@ const sysPrograms_t systemProgams[] = {
     {"fgetl", &fgetl},
     {"flen", &flen},
     {"fex", &fex},
+    {"waitDio", &waitDio},
+    //meArm controller test
+    {"getKey", &getKey},
+    {"manCmd", &manCmd},
+    {"teachPos", &teachPos},
+    {"open", &openGripper},
+    {"close", &closeGripper},
+    {"movej", &movej},
     #ifdef DEBUG
     {"memDump", &memDump},
     #endif
@@ -64,6 +73,11 @@ fakePin_t ioPin[] = {
     {false, false},
     {false, false}
 };
+
+int leftServoLastPos = 0;
+int rightServoLastPos = 0;
+int baseServoLastPos = 0;
+bool gripperIsOpen = false;
 
 
 Sys::Sys()
@@ -95,18 +109,19 @@ bool Sys::getFileLine(char* fileName, unsigned int lineNumber, char* line){
     if(i == lineNumber){
         line[0]='\0';
         //so be careful...sizeof(line) must be greater than MAX_FILE_LINE_LENGTH
-        if (l_lineStatements.length()==MAX_FILE_LINE_LENGTH){
-            strncat(line, l_lineStatements.c_str(), MAX_FILE_LINE_LENGTH);
-            line[MAX_FILE_LINE_LENGTH-1]='\n';
-            line[MAX_FILE_LINE_LENGTH]='\0';
+        strncat(line, l_lineStatements.c_str(), MAX_FILE_LINE_LENGTH-1);
+        if (l_lineStatements.length()<=MAX_FILE_LINE_LENGTH){
+            //strncat(line, l_lineStatements.c_str(), MAX_FILE_LINE_LENGTH-1);
+            //line[l_lineStatements.length()+1]='\n';
+            //line[l_lineStatements.length()+2]='\0';
             l_programFile.close();
             return true;
         }
         else{
-            strncat(line, l_lineStatements.c_str(), MAX_FILE_LINE_LENGTH);
-            if(line[MAX_FILE_LINE_LENGTH-1] != '\n'){
-                strncat(line, "\n", MAX_FILE_LINE_LENGTH);
-            }
+            //strncat(line, l_lineStatements.c_str(), MAX_FILE_LINE_LENGTH-1);
+            line[MAX_FILE_LINE_LENGTH-1]='\n';
+            line[MAX_FILE_LINE_LENGTH]='\0';
+            l_programFile.close();
             return true;
         }
 
@@ -253,6 +268,7 @@ bool free(){
 
 bool setPinMode(){
 
+    //on pc this function has only debug purpose!
 
     //set pin mode according to the arguments 1(int-pin number) and 2(str-pin mode)
 
@@ -289,6 +305,7 @@ bool setPinMode(){
 
 bool setPinStatus(){
 
+    //on pc this function has only debug purpose!
 
     int l_nArg1;
     //set pin status according to the arguments 1(int-pin number) and 2(str-pin value)
@@ -331,6 +348,8 @@ bool setPinStatus(){
 
 bool getPinStatus(){
 
+    //on pc this function has only debug purpose!
+
     //return the current pinStatus of the arg1 pin
     int l_nArg1;
 
@@ -352,11 +371,16 @@ bool getPinStatus(){
 }
 
 bool isInput(unsigned int pin){
+
+    //on pc this function has only debug purpose!
+
     return ioPin[pin-1].isInput;
 }
 
 
 bool getPinMode(){
+
+    //on pc this function has only debug purpose!
 
     //return the current pinMode of the arg1 pin
 
@@ -565,6 +589,290 @@ bool fex(){
         return true;
     }
     return false;
+}
+
+bool waitDio(){
+
+    Sys::userOutput("\n\rwaitDio make no sense on this hardware!\n\r");
+    return true;
+}
+
+
+int jointControl(int currentPos, int setPoint){
+
+    //on pc this function has only debug purpose!
+
+    //move the given joint one step in the direction of the set point
+    //return the new position of the servo
+
+    if(currentPos == setPoint){
+        //don't move...you're arrived!
+        return currentPos;
+    }
+    else if(currentPos<setPoint){
+        return ++currentPos;
+    }
+    else if(currentPos>setPoint){
+        return --currentPos;
+    }
+
+    return 0;
+}
+
+bool jointStep(uint8_t servoId, int8_t step){
+
+    //on pc this function has only debug purpose!
+
+    switch (servoId) {
+    case BASE_SERVO_ID:
+        baseServoLastPos = jointControl(baseServoLastPos, baseServoLastPos+step);
+        Sys::userOutput(F("Base servo step "));
+        break;
+    case RIGHT_SERVO_ID:
+        rightServoLastPos = jointControl(rightServoLastPos, baseServoLastPos+step);
+        Sys::userOutput(F("Right servo step "));
+        break;
+    case LEFT_SERVO_ID:
+        leftServoLastPos = jointControl(leftServoLastPos, baseServoLastPos+step);
+        Sys::userOutput(F("Left servo step "));
+        break;
+    default:
+        return false;
+        break;
+    }
+    Sys::userOutput(step);
+    Sys::userOutput(F("\n\r"));
+
+    return true;
+}
+
+bool getKey(){
+
+    char l_sKey[3];
+
+    Sys::userInput(l_sKey, 3);
+
+    if(!IOData::setOutVal(1, l_sKey)){
+            return false;
+    }
+    return true;
+}
+
+
+
+bool manCmd(){
+
+    char* l_sArg1;
+
+    if(IOData::getArg(1, l_sArg1)){
+
+        switch(l_sArg1[0])
+        {
+        case ('q'):
+            //left servo +1
+            jointStep(LEFT_SERVO_ID, 1);
+            break;
+        case ('a'):
+            //left servo -1
+            jointStep(LEFT_SERVO_ID, -1);
+            break;
+        case ('r'):
+            //right servo +1
+            jointStep(RIGHT_SERVO_ID, 1);
+            break;
+        case ('d'):
+            //right servo -1
+            jointStep(RIGHT_SERVO_ID, -1);
+            break;
+        case ('x'):
+            //base servo +1
+            jointStep(BASE_SERVO_ID, 1);
+            break;
+        case ('c'):
+            //base servo -1
+            jointStep(BASE_SERVO_ID, -1);
+            break;
+        case ('g'):
+            //toggle gripper
+            gripperIsOpen? closeGripper():openGripper();
+            break;
+        default:
+            //opzionale
+            break;
+        };
+        return true;
+    }
+    else{
+        Sys::userOutput(F("usage: movej posname\n\r"));
+        return false;
+    }
+}
+
+bool writePos(char* posName){
+
+    char l_sPos[MAX_NUMLEN+1];
+
+    if(!IOData::setArg(1, "posDB")) return false;
+
+    //pos name
+    if(!IOData::setArg(2, posName)) return false;
+    append();
+    //base
+    l_sPos[0] = '\0';
+    sprintf(l_sPos, "%u", baseServoLastPos);
+    if(!IOData::setArg(2, l_sPos)) return false;
+    append();
+    //right
+    l_sPos[0] = '\0';
+    sprintf(l_sPos, "%u", rightServoLastPos);
+    if(!IOData::setArg(2, l_sPos)) return false;
+    append();
+    //left
+    l_sPos[0] = '\0';
+    sprintf(l_sPos, "%u", leftServoLastPos);
+    if(!IOData::setArg(2, l_sPos)) return false;
+    append();
+
+    return true;
+}
+
+bool teachPos(){
+
+    char* l_sArg1;
+    char l_sPosName[MAX_STRINGLEN+1];
+
+    if(!IOData::getArg(1, l_sArg1)) return false;
+    l_sPosName[0]='\0';
+    strncat(l_sPosName, l_sArg1, MAX_STRINGLEN);
+
+    //check if the pos file already exists...if not create it
+    if(!IOData::setArg(1, "posDB")) return false;
+    if (!Sys::fileExists("posDB")){
+        if(!touch()) return false;
+    }
+
+    //check if the "pos" already exists!
+
+    char* l_newLine;
+    char* l_sCurrLine;
+    char* l_sKey;
+    bool l_isNewPosition = true;
+    bool l_bReadOk = false;
+    int lineNumber = 1;
+
+    do {
+        if(!IOData::setArg(2, lineNumber)) return false;
+        l_bReadOk = fgetl() && IOData::getOutVal(1, l_sCurrLine);
+        if(l_bReadOk){
+            //remove trailing \n if exists
+            if ((l_newLine=strchr(l_sCurrLine, '\n')) != NULL) *l_newLine = '\0';
+            if(strncmp(l_sCurrLine, l_sPosName, strlen(l_sPosName))==0) l_isNewPosition = false;
+        }
+        lineNumber++;
+    }while(l_bReadOk && l_isNewPosition);
+    //File.close()
+
+    if(l_isNewPosition){
+        //new position...just write
+        if(!writePos(l_sPosName)) return false;
+        Sys::userOutput(F("\n\r saved!\n\r"));
+        return true;
+    }
+    else{
+        //already existing
+        Sys::userOutput(F("do you wan to overwrite this position?(y/n): "));
+        getKey();
+        if(!IOData::getOutVal(1, l_sKey)) return false;
+        if(l_sKey[0]=='y'){
+            Sys::userOutput(F("\n\r sorry...still have to do this...\n\r"));
+        }
+        Sys::userOutput(F("\n\r saved!\n\r"));
+        return true;
+        }
+    }
+
+
+bool openGripper(){
+    //open gripper
+
+    gripperIsOpen = true;
+    return true;
+}
+
+bool closeGripper(){
+    //close gripper
+
+    gripperIsOpen = false;
+    return true;
+}
+
+bool movej(){
+
+    char* l_sArg1;
+    int l_nArg2;
+    char l_sPosName[MAX_STRINGLEN+1];
+    char* l_sCurrLine;
+
+    if(!IOData::getArg(1, l_sArg1) || !IOData::getArg(2, l_nArg2)){
+        Sys::userOutput(F("usage: movej pos_name speed_perc\n\r"));
+        return false;
+    }
+
+    //trim speed value
+    if(l_nArg2>100) l_nArg2=100;
+    if(l_nArg2<1) l_nArg2=1;
+    //copy locally the position's name
+    strncpy(l_sPosName, l_sArg1, MAX_STRINGLEN);
+    int lineNumber = 1;
+
+    if(!IOData::setArg(1, "posDB")) return false;
+
+    char* l_newLine;
+
+    do{
+        IOData::setArg(2, lineNumber);
+        if(!fgetl() && IOData::getOutVal(1, l_sCurrLine)) return false;
+        //remove trailing \n if exists
+        if ((l_newLine=strchr(l_sCurrLine, '\n')) != NULL) *l_newLine = '\0';
+        lineNumber++;
+
+     } while(strcmp(l_sCurrLine, l_sPosName)!=0);
+
+    //the next 3 rows contains the servo values of the wanted pos!
+
+    //base servo set-point
+    //set arguments for fgetl
+    if(!IOData::setArg(1, "posDB") || !IOData::setArg(2, lineNumber)) return false;
+    //execute and get fgetl's result
+    if (!fgetl() || !IOData::getOutVal(1, l_sCurrLine)) return false;
+    int l_nBaseServoPosSP = atoi(l_sCurrLine);
+
+    //right servo set-point
+    //set arguments for fgetl
+    if (!IOData::setArg(1, "posDB") || !IOData::setArg(2, lineNumber+1)) return false;
+    //execute and get fgetl's result
+    if (!fgetl() || !IOData::getOutVal(1, l_sCurrLine)) return false;
+    int l_nRightServoPosSP = atoi(l_sCurrLine);
+
+    //left servo set-point
+    //set arguments for fgetl
+    if(!IOData::setArg(1, "posDB") || !IOData::setArg(2, lineNumber+2)) return false;
+    //execute and get fgetl's result
+    if (!fgetl() || !IOData::getOutVal(1, l_sCurrLine)) return false;
+    int l_nLeftServoPosSP = atoi(l_sCurrLine);
+
+    //now execute the movement one step at time
+    bool l_bSkipStep=false;
+    while(baseServoLastPos != l_nBaseServoPosSP || rightServoLastPos != l_nRightServoPosSP || leftServoLastPos != l_nLeftServoPosSP){
+        //the base rotate half the speed of the other joints
+        l_bSkipStep = !l_bSkipStep;
+        if(!l_bSkipStep) baseServoLastPos = jointControl(baseServoLastPos, l_nBaseServoPosSP);
+        rightServoLastPos = jointControl(rightServoLastPos, l_nRightServoPosSP);
+        leftServoLastPos = jointControl(leftServoLastPos, l_nLeftServoPosSP);
+        //delay((100 - l_nArg2) + 20);
+    }
+    //movement finished!
+    return true;
 }
 
 

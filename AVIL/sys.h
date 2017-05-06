@@ -23,13 +23,13 @@
 
 #include "compopt.h"
 #include "stdint.h"
-#include "data.h"
+#include "avilData.h"
 
 
 #if SYSTEM == ARDU_UNO
-       #define HW "arduinoSys.h"
+       #define HW "sysArduinoUNO.h"
 #elif SYSTEM == PC
-       #define HW "pcSys.h"
+       #define HW "sysPC.h"
        #define F(x) x
 #else
        #define HW "default.h"

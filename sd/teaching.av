@@ -1,0 +1,21 @@
+var
+int n1 = 0
+string sPn = ""
+string cmd = ""
+endvar
+
+begin
+	
+	call cat "mahowto"
+	for n1 = 0 to 1 step 0
+		call getKey
+		cmd = @1
+		if cmd=="t"
+			print "pos name: "
+			getStr sPn
+			call teachPos sPn
+		else
+			call manCmd cmd
+		endif
+	endfor
+end

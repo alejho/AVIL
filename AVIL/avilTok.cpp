@@ -18,7 +18,7 @@
  * 
  * 
  */
-#include "tokenizer.h"
+#include "avilTok.h"
 
 Tokenizer::Tokenizer()
 {
@@ -91,7 +91,7 @@ bool Tokenizer::finished(){
     if (m_statementsPtrCurrent == NULL){
         return true;
     }
-    if (*m_statementsPtrCurrent == 0){
+    if (*m_statementsPtrCurrent == '\0'){
         return true;
     }
     if (m_currentToken == TOKEN_ENDOFINPUT){

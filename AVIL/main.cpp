@@ -23,6 +23,7 @@
 #if SYSTEM == PC
 
 avil interpreter;
+char cmd[30];
 
 int main(){
 
@@ -31,7 +32,26 @@ int main(){
     }
 
     //run the program blink
-    interpreter.run("blink.av");
+    //interpreter.run("blink.av");
+
+    if(!interpreter.init()){
+          Sys::userOutput(F("init error\n\r"));
+          while(1);
+    }
+    cmd[0]='\0';
+
+    while(1){
+        Sys::userOutput(F("\n\r>"));
+          //get a user input
+          if(Sys::userInput(cmd, 30)){
+              Sys::userOutput(F("\n\r"));
+              interpreter.run(cmd);
+              Sys::userOutput(F("program finished \n\r"));
+          }
+          else{
+              Sys::userOutput(F("bad input!\n"));
+          }
+    }
 
     return 0;
 }

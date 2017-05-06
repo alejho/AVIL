@@ -1,0 +1,38 @@
+var
+int n1 = 0
+endvar
+
+begin
+	
+	//set pin 2 as input and pin 3 as output 
+	call setPM 3 OUTPUT
+	call setPM 2 INPUT
+	
+	call movej "home" 50
+	
+	//infinite loop
+	for n1 = 0 to 1 step 0
+	
+		call waitDio 2
+		call dioW 3 false
+		call open
+		println "cycle started"
+		
+		call movej "prepick" 100
+		call movej "pick" 50
+		call close
+		delay 500
+		call movej "prepick" 100
+		call movej "preplace" 100
+		call movej "place" 50
+		call open
+		delay 500
+		call movej "preplace" 100
+		
+		call movej "home" 50
+		call dioW 3 true
+		println "cycle finished"
+		
+	endfor
+
+end

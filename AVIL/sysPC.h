@@ -18,30 +18,41 @@
  * 
  * 
  */
+#if SYSTEM == PC
 
-#ifndef ARDUINO_SYS_H
-#define ARDUINO_SYS_H
+#ifndef PC_SYS_H
+#define PC_SYS_H
 
 #include "compopt.h"
-#if SYSTEM == ARDU_UNO
 
-#include <Fat16.h>
-const uint8_t CHIP_SELECT = 4;
+#include "stdlib.h"
+#include "iostream"
+#include "fstream"
+#include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+//#include <curses.h>
 
-#ifdef ETH_IO
-    #include <Ethernet.h>
-    const uint8_t CHIP_SELECT_ETH = 10;
-#endif
+//fake pin for digital I/O simulation
+typedef struct fakePinStruct{
+    bool isInput;
+    bool status;
+}fakePin_t;
 
+//meArm servo id's for simulation
+const uint8_t  BASE_SERVO_ID = 1;
+const uint8_t  RIGHT_SERVO_ID = 2;
+const uint8_t  LEFT_SERVO_ID = 3;
+const uint8_t  GRIPPER_SERVO_ID = 4;
 
-const uint8_t KILL_KEY = 27;
 
 bool ls();
 bool free();
 bool setPinMode();
 bool setPinStatus();
 bool getPinStatus();
-bool isInput(int pin);
+bool isInput(unsigned int pin);
 bool getPinMode();
 bool idle();
 bool cat();
@@ -52,10 +63,22 @@ bool append();
 bool fgetl();
 bool flen();
 bool fex();
-bool frec();
+bool getKey();
+bool waitDio();
+bool manCmd();
+bool writePos(char* posName);
+bool teachPos();
+bool jointStep(uint8_t servoId, int8_t step);
+bool openGripper();
+bool closeGripper();
+bool movej();
 #ifdef DEBUG
 bool memDump();
 #endif
+
+//add custom function's prototypes here:
+//bool foo();
+
 
 #endif
 #endif
