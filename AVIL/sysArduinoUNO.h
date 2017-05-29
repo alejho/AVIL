@@ -28,6 +28,7 @@
 #include <Fat16.h>
 const uint8_t CHIP_SELECT = 4;
 
+
 #ifdef ETH_IO
     #include <Ethernet.h>
     const uint8_t CHIP_SELECT_ETH = 10;
@@ -72,6 +73,10 @@ bool flen();
 bool fex();
 bool frec();
 bool waitDio();
+
+void setFileBookmark(unsigned int lineNumber, uint32_t filePos);
+void resetFileBookmark();
+
 #ifdef MEARM
 bool getKey();
 bool jointStep(uint8_t servoId, int8_t step);

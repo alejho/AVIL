@@ -84,6 +84,9 @@ const sysPrograms_t systemProgams[] PROGMEM = {
 
 SdCard SD;
 Fat16 File;
+//this two values are the "file bookmark"
+unsigned int nLastLine = 0;
+uint32_t nLastFilePos = 0;
 
 Sys::Sys()
 {
@@ -161,9 +164,21 @@ bool Sys::getFileLine(char* fileName, unsigned int lineNumber, char* line){
         }
     }
 
-    unsigned int i = 0;
+    unsigned int l_currentLine = 0;
     int len=0;
-    while(i<lineNumber){
+
+    //uhm...where were we last time?
+    if(lineNumber > nLastLine){
+        //if we need a line bigger than the last
+        //we can just start from the last file's byte position and go ahead
+        //this makes the interpreter up to 80% faster!!!
+
+        //move to file bookmark!
+        l_currentLine = nLastLine;
+        File.seekSet(nLastFilePos);
+    }
+
+    while(l_currentLine<lineNumber){
         l_lineStatements[0]='\0';
         len=File.fgets(l_lineStatements, MAX_FILE_LINE_LENGTH+1);
         if(len <= 0){
@@ -176,13 +191,14 @@ bool Sys::getFileLine(char* fileName, unsigned int lineNumber, char* line){
             l_lineStatements[MAX_FILE_LINE_LENGTH-1]='\n';
             while(File.read() != '\n');
         }
-        i++;
+        l_currentLine++;
     }
-    if(i == lineNumber){
+    if(l_currentLine == lineNumber){
         line[0]='\0';
         //so be careful...sizeof(line) must be greater than MAX_FILE_LINE_LENGTH
         strncat(line, l_lineStatements, MAX_FILE_LINE_LENGTH);
         File.close();
+        setFileBookmark(lineNumber, File.curPosition());
         return true;
     }
     else{
@@ -378,6 +394,9 @@ bool Sys::sysProgramExists(const char* programName){
     return false;
 }
 void Sys::runtimeError(unsigned int errorCode, unsigned int programLine){
+
+    resetFileBookmark();
+
     //print data about a runtime error:
     Sys::userOutput(F("\n\r"));
     //current program line number
@@ -398,6 +417,7 @@ void Sys::runtimeError(unsigned int errorCode, unsigned int programLine){
     Sys::userOutput(F("error code: "));
     Sys::userOutput((int)errorCode);
     Sys::userOutput(F("\n\r"));
+
 }
 
 bool ls(){
@@ -778,6 +798,8 @@ bool fgetl(){
     char* l_sArg1;
     int l_nArg2;
 
+    resetFileBookmark();
+
     if(File.isOpen()){
         File.close();
     }
@@ -802,6 +824,8 @@ bool fgetl(){
 bool flen(){
 
     char* l_sArg1;
+
+    resetFileBookmark();
 
     if(File.isOpen()){
         File.close();
@@ -930,6 +954,18 @@ bool waitDio(){
         return true;
     }
     return false;
+}
+
+void setFileBookmark(unsigned int lineNumber, uint32_t filePos){
+
+    nLastLine = lineNumber;
+    nLastFilePos = filePos;
+}
+
+void resetFileBookmark(){
+
+    nLastLine = 0;
+    nLastFilePos = 0;
 }
 
 #ifdef MEARM

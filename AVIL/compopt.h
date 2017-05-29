@@ -36,7 +36,7 @@
 #if SYSTEM == ARDU_UNO
 
     //userInput/Output over ethernet (comment for use serial)
-    //#define ETH_IO
+    #define ETH_IO
 
     #ifdef ETH_IO
         //ip address www.xxx.yyy.zzz
