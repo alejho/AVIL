@@ -431,7 +431,7 @@ bool ls(){
             }
             Sys::userOutput(F("\t"));
             Sys::userOutput(int(dir.fileSize));
-            Sys::userOutput(F(" bytes\n"));
+            Sys::userOutput(F(" bytes\n\r"));
         }
     #else
         //File.close();
