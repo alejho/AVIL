@@ -156,20 +156,21 @@ bool Sys::fileExists(const char* fileName){
 bool Sys::getFileLine(char* fileName, unsigned int lineNumber, char* line){
 
     char l_lineStatements[MAX_FILE_LINE_LENGTH + 1];
-    Fat16 File;
 
-    if(!File.isOpen()){
-        if (!File.open(fileName, O_READ)) {
-            return false;
-        }
+    if(File.isOpen()){
+        File.close();
     }
+    if (!File.open(fileName, O_READ)) {
+        return false;
+    }
+
 
     unsigned int l_currentLine = 0;
     int len=0;
 
     //uhm...where were we last time?
     if(lineNumber > nLastLine){
-        //if we need a line bigger than the last
+        //if we need a line number bigger than the last
         //we can just start from the last file's byte position and go ahead
         //this makes the interpreter up to 80% faster!!!
 
@@ -498,7 +499,7 @@ bool setPinStatus(){
     int l_nArg1;
     //set pin status according to the arguments 1(int-pin number) and 2(str-pin value)
     if(IOData::getArg(1, l_nArg1)){
-        if(l_nArg1 == CHIP_SELECT){
+        if(l_nArg1 == CHIP_SELECT || l_nArg1 == SCK || l_nArg1 == MISO || l_nArg1 == MOSI){
             Sys::userOutput(F("dioW: this pin is reserved for sd card!\n\r"));
             return false;
         }
