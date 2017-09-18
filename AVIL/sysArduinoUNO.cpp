@@ -255,7 +255,7 @@ bool Sys::userInput(char* dst, size_t size){
             if(Serial.available() > 0){
                 rc = Serial.read();
                 if(rc>0){
-                    if (rc != '\r' && rc != '\n'){
+                    if (rc != '\r' && rc != '\n' && rc != BACKSPACE_KEY){
                         //echo
                         Sys::userOutput(rc);
                         l_input[i] = rc;
@@ -265,6 +265,17 @@ bool Sys::userInput(char* dst, size_t size){
                         l_input[i] = '\0'; // terminate the string
                         strcpy(dst, l_input);
                         return true;
+                    }
+                    else if(rc == BACKSPACE_KEY && i>0){
+                        //backspace(remove the last character from the input, clear the line and re-echo it!)
+                        Sys::userOutput("\r");
+                        for (uint8_t j = 0; j <= i; ++j) {
+                            Sys::userOutput(F(" "));
+                        }
+                        Sys::userOutput("\r>");
+                        i--;
+                        l_input[i] = '\0';
+                        Sys::userOutput(l_input);
                     }
                     if(i>=size){
                         Sys::userOutput(F("command exceeding buffer size\n\r"));

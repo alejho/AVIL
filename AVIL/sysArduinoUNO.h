@@ -54,6 +54,7 @@ const uint8_t CHIP_SELECT = 4;
 
 
 const uint8_t KILL_KEY = 27;
+const uint8_t BACKSPACE_KEY = 127;
 
 bool ls();
 bool free();
